@@ -7,7 +7,7 @@ Configuration page included into plugin like userservice plugin.
 The service address is [hostname]/plugins/roomservice/roomservice
 Parameters:
 * jid
-* roomName
+* roomname
 * secret
 * subdomain
 * type
