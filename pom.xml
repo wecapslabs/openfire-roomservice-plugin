@@ -90,12 +90,12 @@
 		</plugins>
 	</build>
 	<dependencies>
-		<dependency>
-			<groupId>org.igniterealtime</groupId>
-			<artifactId>openfire</artifactId>
-			<version>3.6.4</version>
-			<scope>provided</scope>
-		</dependency>
+    <dependency>
+      <groupId>org.igniterealtime.openfire</groupId>
+      <artifactId>openfire</artifactId>
+      <version>3.8.2</version>
+      <scope>provided</scope>
+    </dependency>
 		<dependency>
 			<groupId>org.gnu.inet</groupId>
 			<artifactId>libidn</artifactId>

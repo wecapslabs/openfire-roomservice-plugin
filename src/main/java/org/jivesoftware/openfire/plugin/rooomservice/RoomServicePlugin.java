@@ -22,13 +22,20 @@ package org.jivesoftware.openfire.plugin.rooomservice;
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
+import org.jivesoftware.openfire.forms.DataForm;
+import org.jivesoftware.openfire.forms.FormField;
+import org.jivesoftware.openfire.forms.spi.XDataFormImpl;
+import org.jivesoftware.openfire.forms.spi.XFormFieldImpl;
 import org.jivesoftware.openfire.muc.MultiUserChatManager;
 import org.jivesoftware.openfire.muc.MultiUserChatService;
 import org.jivesoftware.openfire.muc.NotAllowedException;
+import org.jivesoftware.openfire.muc.MUCRoom;
 import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.util.PropertyEventDispatcher;
 import org.jivesoftware.util.PropertyEventListener;
 import org.jivesoftware.util.StringUtils;
+import org.dom4j.Element;
+import org.xmpp.packet.IQ;
 import org.xmpp.packet.JID;
 
 import java.io.File;
@@ -36,12 +43,17 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Plugin that allows the administration of users via HTTP requests.
  *
  * @author Justin Hunt
  */
 public class RoomServicePlugin implements Plugin, PropertyEventListener {
+    public static final Logger Log = LoggerFactory.getLogger(RoomServicePlugin.class);
+
     private MultiUserChatManager chatManager;
     private XMPPServer server;
 
@@ -59,7 +71,7 @@ public class RoomServicePlugin implements Plugin, PropertyEventListener {
             secret = StringUtils.randomString(8);
             setSecret(secret);
         }
-        
+
         // See if the service is enabled or not.
         enabled = JiveGlobals.getBooleanProperty("plugin.roomservice.enabled", false);
 
@@ -78,9 +90,108 @@ public class RoomServicePlugin implements Plugin, PropertyEventListener {
 
     public void createChat(String jid, String subdomain, String roomName) throws NotAllowedException {
         MultiUserChatService multiUserChatService = chatManager.getMultiUserChatService(subdomain);
-        multiUserChatService.getChatRoom(roomName, new JID(jid));
+        MUCRoom room = multiUserChatService.getChatRoom(roomName, new JID(jid));
+
+        try {
+            FormField field;
+            XDataFormImpl dataForm = new XDataFormImpl(DataForm.TYPE_SUBMIT);
+
+            field = new XFormFieldImpl("FORM_TYPE");
+            field.setType(FormField.TYPE_HIDDEN);
+            field.addValue("http://jabber.org/protocol/muc#roomconfig");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_roomname");
+            field.addValue(roomName);
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_roomdesc");
+            field.addValue(roomName);
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_changesubject");
+            field.addValue("0");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_maxusers");
+            field.addValue("0");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_presencebroadcast");
+            field.addValue("moderator");
+            field.addValue("participant");
+            field.addValue("visitor");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_publicroom");
+            field.addValue("1");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_persistentroom");
+            field.addValue("1");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_moderatedroom");
+            field.addValue("0");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_membersonly");
+            field.addValue("0");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_allowinvites");
+            field.addValue("0");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_passwordprotectedroom");
+            field.addValue("0");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_roomsecret");
+            field.addValue("");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_whois");
+            field.addValue("anyone");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_enablelogging");
+            field.addValue("1");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("x-muc#roomconfig_reservednick");
+            field.addValue("1");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("x-muc#roomconfig_canchangenick");
+            field.addValue("1");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("x-muc#roomconfig_registration");
+            field.addValue("1");
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_roomadmins");
+            for (JID adminJID : room.getAdmins()) {
+                field.addValue(adminJID.toString());
+            }
+            dataForm.addField(field);
+
+            field = new XFormFieldImpl("muc#roomconfig_roomowners");
+            for (JID ownerJID : room.getOwners()) {
+                field.addValue(ownerJID.toString());
+            }
+            dataForm.addField(field);
+
+            IQ iq = new IQ(IQ.Type.set);
+            Element element = iq.setChildElement("query", "http://jabber.org/protocol/muc#owner");
+            element.add(dataForm.asXMLElement());
+            room.getIQOwnerHandler().handleIQ(iq, room.getRole());
+        } catch (Exception e) {
+            Log.error("exception: " + e);
+        }
     }
-    
+
     public void deleteChat(String jid, String subdomain, String roomName) {
         MultiUserChatService multiUserChatService = chatManager.getMultiUserChatService(subdomain);
         multiUserChatService.removeChatRoom(roomName);
