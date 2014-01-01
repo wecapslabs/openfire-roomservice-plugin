@@ -136,7 +136,7 @@ public class RoomServicePlugin implements Plugin, PropertyEventListener {
             dataForm.addField(field);
 
             field = new XFormFieldImpl("muc#roomconfig_membersonly");
-            field.addValue("0");
+            field.addValue("1");
             dataForm.addField(field);
 
             field = new XFormFieldImpl("muc#roomconfig_allowinvites");
@@ -152,7 +152,7 @@ public class RoomServicePlugin implements Plugin, PropertyEventListener {
             dataForm.addField(field);
 
             field = new XFormFieldImpl("muc#roomconfig_whois");
-            field.addValue("anyone");
+            field.addValue("moderator");
             dataForm.addField(field);
 
             field = new XFormFieldImpl("muc#roomconfig_enablelogging");
